@@ -65,30 +65,6 @@ def get_json_response_from_gpt(
     json_dict['thinking'] = thinking
     json_dict['answer'] = answer
     # Log the message and response
-
-    log_file = "gpt_response_log.json"
-
-    log_entry = {
-        "message": msg,
-        "response": json_dict
-    }
-    
-    try:
-        # Load existing log if it exists
-        if os.path.exists(log_file):
-            with open(log_file, 'r') as f:
-                log_data = json.load(f)
-        else:
-            log_data = []
-            
-        # Append new entry
-        log_data.append(log_entry)
-        
-        # Write updated log
-        with open(log_file, 'w') as f:
-            json.dump(log_data, f, indent=4)
-    except Exception as e:
-        print(f"Error logging response: {e}")
     
     # cost = response.usage.completion_tokens / 1000000 * 15 + response.usage.prompt_tokens / 1000000 * 5
     assert not json_dict is None
@@ -230,7 +206,7 @@ def search(args):
 
     for n in range(start, args.n_generation):
         print(f"============Generation {n + 1}=================")
-        system_prompt, prompt = get_prompt(archive)
+        system_prompt, prompt = get_prompt(archive, args.task_description)
         msg_list = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
@@ -414,21 +390,23 @@ def evaluate_forward_fn(args, forward_str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_filename', type=str, default="dataset/mmlu.csv")
-    parser.add_argument('--valid_size', type=int, default=128)
-    parser.add_argument('--test_size', type=int, default=800)
+    parser.add_argument('--valid_size', type=int, default=10)
+    parser.add_argument('--test_size', type=int, default=10)
     parser.add_argument('--shuffle_seed', type=int, default=0)
     parser.add_argument('--n_repreat', type=int, default=1)
-    parser.add_argument('--multiprocessing', action='store_true', default=True)
-    parser.add_argument('--max_workers', type=int, default=48)
+    parser.add_argument('--multiprocessing', action='store_true', default=False)
+    parser.add_argument('--max_workers', type=int, default=1)
     parser.add_argument('--debug', action='store_true', default=True)
     parser.add_argument('--save_dir', type=str, default='results/')
-    parser.add_argument('--expr_name', type=str, default="mmlu_gpt3.5_results")
-    parser.add_argument('--n_generation', type=int, default=30)
+    parser.add_argument('--expr_name', type=str, default="mmlu_results")
+    parser.add_argument('--n_generation', type=int, default=10)
     parser.add_argument('--debug_max', type=int, default=3)
     parser.add_argument('--model',
                         type=str,
+                        # Currently, we override with our local LLAMA
                         default='claude-3-haiku-20240307',
                         choices=['gpt-4-turbo-2024-04-09', 'claude-3-5-haiku-latest', 'gpt-4o-2024-05-13'])
+    parser.add_argument('--task_description', type=str, default="")
 
     args = parser.parse_args()
     # search

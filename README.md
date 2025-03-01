@@ -16,7 +16,7 @@ export OPENAI_API_KEY="YOUR KEY HERE"
 
 ## Running Instructions
 ```bash
-python gui.py
+python app.py
 ```
 
 ## References

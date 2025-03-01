@@ -226,7 +226,7 @@ system_prompt = """You are a helpful assistant. Make sure to return in a WELL-FO
 base = """# Overview
 You are an expert machine learning researcher testing various agentic systems. Your objective is to design building blocks such as prompts and control flows within these systems to solve complex tasks. Your aim is to design an optimal agent performing well on the MMLU (Massive Multitask Language Understanding) benchmark, a challenging evaluation that assesses a model's ability to answer questions across a wide range of subjects and difficulty levels. It includes subjects from STEM, social sciences, humanities, and more.
 
-## An example question from MMLU:
+## An example multiple choice question:
 
 Answer the following multiple choice question.
 
@@ -423,14 +423,14 @@ The fitness value is the median and 95% Bootstrap Confidence Interval of the cor
 # Output Instruction and Example:
 The first key should be ("thought"), and it should capture your thought process for designing the next function. In the "thought" section, first reason about what should be the next interesting agent to try, then describe your reasoning and the overall concept behind the agent design, and finally detail the implementation steps.
 The second key ("name") corresponds to the name of your next agent architecture. 
-Finally, the last key ("code") corresponds to the exact “forward()” function in Python code that you would like to try. You must write a COMPLETE CODE in "code": Your code will be part of the entire project, so please implement complete, reliable, reusable code snippets.
+Finally, the last key ("code") corresponds to the exact "forward()" function in Python code that you would like to try. You must write a COMPLETE CODE in "code": Your code will be part of the entire project, so please implement complete, reliable, reusable code snippets.
 
 Here is an example of the output format for the next agent architecture:
 
 [EXAMPLE]
 
 You must use the exact function interface used above. You need to specify the instruction, input information, and the required output fields for various LLM agents to do their specific part of the architecture. 
-Also, it could be helpful to set the LLM’s role and temperature to further control the LLM’s response. Note that the LLMAgentBase() will automatically parse the output and return a list of “Infos”. You can get the content by Infos.content. 
+Also, it could be helpful to set the LLM's role and temperature to further control the LLM's response. Note that the LLMAgentBase() will automatically parse the output and return a list of "Infos". You can get the content by Infos.content. 
 DO NOT FORGET the taskInfo input to LLM if you think it is needed, otherwise LLM will not know about the task.
 
 ## WRONG Implementation examples:
@@ -532,11 +532,20 @@ def get_init_archive():
     return [COT, COT_SC, Reflexion, LLM_debate, Take_a_step_back, QD, Role_Assignment]
 
 
-def get_prompt(current_archive, adaptive=False):
+def get_prompt(current_archive, task_description=None):
     archive_str = ",\n".join([json.dumps(sol) for sol in current_archive])
     archive_str = f"[{archive_str}]"
     prompt = base.replace("[ARCHIVE]", archive_str)
     prompt = prompt.replace("[EXAMPLE]", json.dumps(EXAMPLE))
+
+    # Replace the default MMLU description with the provided task description if available
+    if task_description:
+        # Find the start of the MMLU description
+        start_idx = prompt.find("Your aim is to design an optimal agent performing well on the MMLU")
+        end_idx = prompt.find("## An example question from MMLU:")
+        if start_idx != -1 and end_idx != -1:
+            # Replace the MMLU description with the task description
+            prompt = prompt[:start_idx] + task_description + prompt[end_idx:]
 
     return system_prompt, prompt
 

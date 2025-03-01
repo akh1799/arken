@@ -8,3 +8,4 @@ blobfile
 pyqt6
 ttkinter
 requests
+flask

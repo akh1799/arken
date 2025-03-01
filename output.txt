@@ -1,5 +1,0 @@
-============Initial Archive: Self-Consistency with Chain-of-Thought=================
-problem length: 10
-Invalid control character at: line 1 column 112 (char 111)
-Invalid control character at: line 1 column 45 (char 44)
-Invalid control character at: line 1 column 45 (char 44)
