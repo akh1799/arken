@@ -179,7 +179,7 @@ def set_single_line_dynamic_height(text_edit):
 
     # Start with two lines height (approximately 70px)
     text_edit.setMinimumHeight(70)
-    text_edit.setMaximumHeight(200)  # Set a maximum height
+    text_edit.setMaximumHeight(100)  # Set a maximum height
 
     def adjust_dynamic_height():
         doc_height = text_edit.document().size().height()

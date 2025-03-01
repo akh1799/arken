@@ -66,6 +66,7 @@ class SearchGUI(QMainWindow):
         self.showMaximized()
         # self.init_ui()
         setup_ui(self)
+        # MainWindow.init_ui(self)
 
     def adjust_task_height(self):
         doc_height = self.task_text.document().size().height()
