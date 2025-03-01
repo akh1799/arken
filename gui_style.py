@@ -177,31 +177,24 @@ QTextEdit#example_text::placeholder {
 
 def set_single_line_dynamic_height(text_edit):
 
-    # Start with two lines height (approximately 70px)
     text_edit.setMinimumHeight(70)
-    text_edit.setMaximumHeight(100)  # Set a maximum height
+    text_edit.setMaximumHeight(100)
 
     def adjust_dynamic_height():
         doc_height = text_edit.document().size().height()
         margins = text_edit.contentsMargins()
         
-        # Calculate required height with some padding
         required_height = doc_height + margins.top() + margins.bottom()
         
-        # Only expand if content exceeds the current height
         if required_height > text_edit.height() + 5:
-            # Expand up to max allowed height
             new_height = min(required_height, 200)
             text_edit.setMinimumHeight(int(new_height))
             text_edit.setMaximumHeight(int(new_height))
-        # Shrink back if content is deleted
         elif required_height < text_edit.height() - 10 and text_edit.height() > 70:
-            # Don't go below two lines height
             new_height = max(70, required_height)
             text_edit.setMinimumHeight(int(new_height))
             text_edit.setMaximumHeight(int(new_height))
 
-    # Whenever text changes, resize
     text_edit.textChanged.connect(adjust_dynamic_height)
 
 
@@ -220,9 +213,8 @@ def setup_status_animation(status_label):
             animation_index = (animation_index + 1) % len(animation_states)
 
     animation_timer.timeout.connect(update_animation)
-    animation_timer.start(500)  # Update every 500 ms
+    animation_timer.start(500)
 
-    # Keep the timer alive by storing it in the label
     status_label.animation_timer = animation_timer
 
     def set_ready():
@@ -233,7 +225,6 @@ def setup_status_animation(status_label):
 
     def set_running():
         status_label.setProperty("status", "running")
-        # Reset animation to the first text
         update_animation()
         status_label.style().unpolish(status_label)
         status_label.style().polish(status_label)
@@ -255,9 +246,8 @@ def setup_ui(window):
     window.setCentralWidget(central_widget)
     main_layout = QVBoxLayout(central_widget)
 
-    # Create a splitter for the two main text areas
     splitter = QSplitter(Qt.Orientation.Horizontal)
-    splitter.setHandleWidth(1)  # Width of the divider
+    splitter.setHandleWidth(1) 
     splitter.setStyleSheet("""
         QSplitter::handle {
             background-color: #404040;
@@ -274,10 +264,10 @@ def setup_ui(window):
     left_container = QWidget()
     left_layout = QVBoxLayout(left_container)
     window.example_text = QTextEdit()
-    window.example_text.setMinimumHeight(70)  # Set to two lines of height
-    window.example_text.setMaximumHeight(200)  # Set a maximum height
+    window.example_text.setMinimumHeight(70)
+    window.example_text.setMaximumHeight(200) 
     window.example_text.setPlaceholderText("Example Input/Output")
-    window.example_text.setObjectName("example_text")  # Add object name for styling
+    window.example_text.setObjectName("example_text")
     left_layout.addWidget(window.example_text)
     splitter.addWidget(left_container)
     
@@ -286,26 +276,22 @@ def setup_ui(window):
     right_layout = QVBoxLayout(right_container)
     right_layout.addWidget(QLabel("Best Model:"))
     window.results_text = QTextEdit()
-    window.results_text.setObjectName("results_text")  # Add this line
+    window.results_text.setObjectName("results_text")
     window.results_text.setMinimumHeight(500)
-    window.results_text.setMinimumHeight(600)  # Increase the minimum height
+    window.results_text.setMinimumHeight(600) 
     window.results_text.setReadOnly(True)
     right_layout.addWidget(window.results_text)
     splitter.addWidget(right_container)
     
-    # Set initial sizes (50/50 split)
     splitter.setSizes([500, 500])
     
-    # Add the splitter to the main layout
     main_layout.addWidget(splitter)
 
     main_layout.addStretch(1)
-    # Add a horizontal line above the status bar
     line = QFrame()
-    line.setFrameShape(QFrame.Shape.HLine)  # Set the frame shape to a horizontal line
-    line.setFrameShadow(QFrame.Shadow.Sunken)  # Set the shadow to sunken
-    line.setLineWidth(2)  # Set the line width
-    # main_layout.addWidget(line)
+    line.setFrameShape(QFrame.Shape.HLine) 
+    line.setFrameShadow(QFrame.Shadow.Sunken) 
+    line.setLineWidth(2) 
     main_layout.addWidget(line, alignment=Qt.AlignmentFlag.AlignBottom)
 
     # Status bar at the bottom left
