@@ -36,7 +36,7 @@ QTextEdit#example_text {
     border-radius: 10px;
 }
 
-/* The “Best Model” text box: blends with background, normal border */
+/* The "Best Model" text box: blends with background, normal border */
 QTextEdit#results_text {
     background-color: #252525;  
     color: white;
@@ -176,33 +176,32 @@ QTextEdit#example_text::placeholder {
 
 
 def set_single_line_dynamic_height(text_edit):
-    """
-    Allows QTextEdit to start at ~2 lines high (70px) and expand up to 200px
-    as content grows.
-    """
-    # Start with approximately two lines of height.
+
+    # Start with two lines height (approximately 70px)
     text_edit.setMinimumHeight(70)
-    text_edit.setMaximumHeight(200)
+    text_edit.setMaximumHeight(200)  # Set a maximum height
 
     def adjust_dynamic_height():
         doc_height = text_edit.document().size().height()
         margins = text_edit.contentsMargins()
-        padding = 5  # Extra space to prevent cutoff
-
-        required_height = doc_height + margins.top() + margins.bottom() + padding
-        current_height = text_edit.height()
-
-        # Grow if content exceeds current height
-        if required_height > current_height + 5:
-            new_height = min(required_height, 200)  # Expand up to 200px
+        
+        # Calculate required height with some padding
+        required_height = doc_height + margins.top() + margins.bottom()
+        
+        # Only expand if content exceeds the current height
+        if required_height > text_edit.height() + 5:
+            # Expand up to max allowed height
+            new_height = min(required_height, 200)
             text_edit.setMinimumHeight(int(new_height))
             text_edit.setMaximumHeight(int(new_height))
-        # Shrink if content is smaller
-        elif required_height < current_height - 10 and current_height > 70:
-            new_height = max(70, required_height)  # Don’t go below 70px
+        # Shrink back if content is deleted
+        elif required_height < text_edit.height() - 10 and text_edit.height() > 70:
+            # Don't go below two lines height
+            new_height = max(70, required_height)
             text_edit.setMinimumHeight(int(new_height))
             text_edit.setMaximumHeight(int(new_height))
 
+    # Whenever text changes, resize
     text_edit.textChanged.connect(adjust_dynamic_height)
 
 
@@ -275,8 +274,10 @@ def setup_ui(window):
     left_container = QWidget()
     left_layout = QVBoxLayout(left_container)
     window.example_text = QTextEdit()
+    window.example_text.setMinimumHeight(70)  # Set to two lines of height
+    window.example_text.setMaximumHeight(200)  # Set a maximum height
     window.example_text.setPlaceholderText("Example Input/Output")
-    window.example_text.setObjectName("example_text")  # important for style override
+    window.example_text.setObjectName("example_text")  # Add object name for styling
     left_layout.addWidget(window.example_text)
     splitter.addWidget(left_container)
     
@@ -285,8 +286,9 @@ def setup_ui(window):
     right_layout = QVBoxLayout(right_container)
     right_layout.addWidget(QLabel("Best Model:"))
     window.results_text = QTextEdit()
-    window.results_text.setObjectName("results_text")
-    window.results_text.setMinimumHeight(200)
+    window.results_text.setObjectName("results_text")  # Add this line
+    window.results_text.setMinimumHeight(500)
+    window.results_text.setMinimumHeight(600)  # Increase the minimum height
     window.results_text.setReadOnly(True)
     right_layout.addWidget(window.results_text)
     splitter.addWidget(right_container)
@@ -296,6 +298,15 @@ def setup_ui(window):
     
     # Add the splitter to the main layout
     main_layout.addWidget(splitter)
+
+    main_layout.addStretch(1)
+    # Add a horizontal line above the status bar
+    line = QFrame()
+    line.setFrameShape(QFrame.Shape.HLine)  # Set the frame shape to a horizontal line
+    line.setFrameShadow(QFrame.Shadow.Sunken)  # Set the shadow to sunken
+    line.setLineWidth(2)  # Set the line width
+    # main_layout.addWidget(line)
+    main_layout.addWidget(line, alignment=Qt.AlignmentFlag.AlignBottom)
 
     # Status bar at the bottom left
     status_frame = QFrame()
@@ -336,6 +347,7 @@ def setup_ui(window):
     window.worker = None
 
     set_single_line_dynamic_height(window.task_text)
-    set_single_line_dynamic_height(window.example_text)
-    set_single_line_dynamic_height(window.example_text)
+    # set_single_line_dynamic_height(window.example_text) 
+    # set_single_line_dynamic_height(window.results_text)  # Add this line for dynamic height adjustment
+
     setup_status_animation(window.status_label)
