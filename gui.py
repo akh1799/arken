@@ -35,6 +35,7 @@ class SearchGUI:
         ttk.Label(main_frame, text="Best Model:").grid(row=5, column=0, sticky=tk.W, pady=5)
         self.results_text = scrolledtext.ScrolledText(main_frame, height=10, width=80)
         self.results_text.grid(row=6, column=0, columnspan=2, pady=5)
+        self.results_text.configure(state='disabled')
         
         # Search Button
         self.search_button = ttk.Button(main_frame, text="Start Search", command=self.start_search)
@@ -93,9 +94,11 @@ class SearchGUI:
                         best_model = solution
             
             if best_model:
+                self.results_text.configure(state='normal')
                 self.results_text.delete("1.0", tk.END)
                 self.results_text.insert(tk.END, f"Best Model (Fitness: {best_model['fitness']}):\n\n")
                 self.results_text.insert(tk.END, best_model['code'])
+                self.results_text.configure(state='disabled')
             
             self.progress_var.set("Search Complete!")
             
