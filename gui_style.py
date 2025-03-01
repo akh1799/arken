@@ -266,7 +266,7 @@ def setup_ui(window):
     left_layout = QVBoxLayout(left_container)
 
     # Title and Subtitle
-    title_label = QLabel("<b>One-Click Agents</b>")
+    title_label = QLabel("<b>InstA-gent🤵‍♂️</b>")
     title_label.setObjectName("title_label")
     title_label.setStyleSheet("font-size: 30px;") 
     subtitle_label = QLabel("Automation to create high-level reasoning agents blazing fast")
@@ -276,13 +276,10 @@ def setup_ui(window):
     left_layout.addWidget(title_label)
     left_layout.addWidget(subtitle_label)
 
-    # Example Input/Output Text Box
-    window.example_text = QTextEdit()
-    window.example_text.setMinimumHeight(70)
-    window.example_text.setMaximumHeight(200) 
-    window.example_text.setPlaceholderText("Example Input/Output")
-    window.example_text.setObjectName("example_text")
-    left_layout.addWidget(window.example_text)
+    # File Upload Button
+    upload_button = QPushButton("📁 Upload File")
+    upload_button.clicked.connect(lambda: window.upload_file())  # Connect to upload function
+    left_layout.addWidget(upload_button)
 
     left_layout.addStretch(0) 
 
@@ -337,10 +334,30 @@ def setup_ui(window):
     window.task_text.setMinimumHeight(35)
     window.task_text.setMaximumHeight(35)
     window.task_text.setPlaceholderText("Task Description")
+    
+
+    
     window.task_text.textChanged.connect(window.adjust_task_height)
     bottom_layout.addWidget(window.task_text)
 
-    window.search_button = QPushButton("Search")
+    # Set gradient background for the search button
+    window.search_button = QPushButton("  Search  ")
+    window.search_button.setStyleSheet("""
+        QPushButton {
+            background: grey;
+            color: white;  /* Text color */
+            font-weight: bold;
+            border: none;  /* Remove border */
+            padding: 10px; /* Add some padding */
+            border-radius: 5px; /* Rounded corners */
+        }
+        QPushButton:hover {
+            background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, 
+                                stop: 0 lightblue, stop: 1 purple);                           
+            border: 3px;
+        }
+    """)
+
     window.search_button.clicked.connect(window.start_search)
     bottom_layout.addWidget(window.search_button)
     

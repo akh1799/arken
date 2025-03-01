@@ -5,7 +5,7 @@ import argparse
 import threading
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
-                            QFrame, QMessageBox, QSplitter)
+                            QFrame, QMessageBox, QSplitter, QFileDialog)
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 
 
@@ -97,10 +97,21 @@ class SearchGUI(QMainWindow):
         self.status_label.set_ready()
         self.search_button.setEnabled(True)
 
-    def search_error(self, error_message):
+    def search_error(self, error_message):  
         self.status_label.set_error()
         QMessageBox.critical(self, "Error", error_message)
         self.search_button.setEnabled(True)
+
+    def upload_file(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select a File", "", "CSV Files (*.csv);;All Files (*)")
+        if file_name:
+            if not file_name.endswith('.csv'):
+                QMessageBox.critical(self, "Invalid File", "Please select a CSV file.")
+            else:
+                self.uploaded_file = file_name  # Store the uploaded file path
+                QMessageBox.information(self, "File Selected", f"File uploaded: {file_name}")
+        else:
+            QMessageBox.warning(self, "No File Selected", "No file was selected.")
 
 def main():
     app = QApplication(sys.argv)
