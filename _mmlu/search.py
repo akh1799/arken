@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import random
+import requests
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 
@@ -16,7 +17,7 @@ from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
 client = openai.OpenAI(
     api_key = "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",
-    # api_key=os.environ["ANTHROPIC_API_KEY"],  # Your Anthropic API key from environment variable
+    # api_key=os.environ["ANTHROPIC_API_KEY"], 
     base_url="https://api.anthropic.com/v1/"  # Anthropic's API endpoint
 )
 
@@ -31,6 +32,7 @@ SYSTEM_MSG = ""
 PRINT_LLM_DEBUG = False
 SEARCHING_MODE = True
 
+URL = "https://0sryxe66na3wyc-8000.proxy.runpod.net/v1/chat/completions"
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError)
 def get_json_response_from_gpt(
@@ -39,17 +41,55 @@ def get_json_response_from_gpt(
         system_message,
         temperature=0.5
 ):
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": msg},
-        ],
-        temperature=temperature, max_tokens=4096, stop=None, response_format={"type": "json_object"}
+    response = requests.post(
+        url = URL,
+        json = {
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": msg},
+            ],
+            "temperature": temperature, 
+            # "max_tokens": 4096, 
+        }
     )
-    content = response.choices[0].message.content
-    json_dict = json.loads(content)
-    print('PAST JSON')
+
+    if response.status_code != 200:
+        print(f"Error {response.status_code}: {response.text}")
+
+    response_json = response.json()
+    content = response_json['choices'][0]['message']['content']
+    thinking = content.split("thinking")[-1].split("\"")[2]
+    answer = content.split("answer")[-1].split("\"")[2]
+    json_dict = {}
+    # ": "A" 
+    json_dict['thinking'] = thinking
+    json_dict['answer'] = answer
+    # Log the message and response
+
+    log_file = "gpt_response_log.json"
+
+    log_entry = {
+        "message": msg,
+        "response": json_dict
+    }
+    
+    try:
+        # Load existing log if it exists
+        if os.path.exists(log_file):
+            with open(log_file, 'r') as f:
+                log_data = json.load(f)
+        else:
+            log_data = []
+            
+        # Append new entry
+        log_data.append(log_entry)
+        
+        # Write updated log
+        with open(log_file, 'w') as f:
+            json.dump(log_data, f, indent=4)
+    except Exception as e:
+        print(f"Error logging response: {e}")
+    
     # cost = response.usage.completion_tokens / 1000000 * 15 + response.usage.prompt_tokens / 1000000 * 5
     assert not json_dict is None
     return json_dict
@@ -61,14 +101,19 @@ def get_json_response_from_gpt_reflect(
         model,
         temperature=0.8
 ):
-    response = client.chat.completions.create(
-        model=model,
-        messages=msg_list,
-        temperature=temperature, max_tokens=4096, stop=None, response_format={"type": "json_object"}
+    response = requests.post(
+        url = URL, 
+        json = {
+            "messages": msg_list
+        }
     )
-    content = response.choices[0].message.content
-    print('IN REFLECT')
-    print(f'{content=}')
+
+    if response.status_code != 200:
+        print(f"Error {response.status_code}: {response.text}")
+    
+    response_json = response.json()
+    content = response_json['choices'][0]['message']['content']
+
     json_dict = json.loads(content)
     assert not json_dict is None
     return json_dict

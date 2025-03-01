@@ -137,7 +137,7 @@ Take_a_step_back = {"thought": "Let LLM first think about the principles involve
                     "name": "Step-back Abstraction",
                     "code": """def forward(self, taskInfo):
         # Instruction for understanding the principles involved in the task
-        principle_instruction = "What are the principles and concepts involved in solving this task? First think step by step. Then list all involved principles and explain them."
+        principle_instruction = "What are the physics, chemistry or biology principles and concepts involved in solving this task? First think step by step. Then list all involved principles and explain them."
         
         # Instruction for solving the task based on the principles
         cot_instruction = "Given the question and the involved principle behind the question, think step by step and then solve the task."
@@ -196,35 +196,25 @@ QD = {"thought": "Similar to Quality-Diversity methods, let LLM generate multipl
 Role_Assignment = {"thought": "Similar to Auto-GPT and expert prompting, we can use dynamic control flow in the design to let the agent decide what expert we should use.",
                    "name": "Dynamic Assignment of Roles",
                    "code": """def forward(self, taskInfo):
-        # Get additional info from taskInfo to help with role selection
-        additional_info = taskInfo.additional_info if hasattr(taskInfo, 'additional_info') else {}
-        
         # Instruction for step-by-step reasoning
         cot_instruction = "Please think step by step and then solve the task."
-        
-        # Define available expert roles based on task domain
-        expert_roles = ['General Expert', 'Math Expert', 'Science Expert', 'History Expert', 
-                       'Literature Expert', 'Technology Expert']
-        if 'subject' in additional_info:
-            # Add subject-specific expert if available
-            expert_roles.append(f"{additional_info['subject']} Expert")
-        
-        expert_agents = [LLMAgentBase(['thinking', 'answer'], 'Expert Agent', role=role) 
-                        for role in expert_roles]
+        expert_agents = [LLMAgentBase(['thinking', 'answer'], 'Expert Agent', role=role) for role in ['Physics Expert', 'Chemistry Expert', 'Biology Expert', 'Science Generalist']]
 
         # Instruction for routing the task to the appropriate expert
-        routing_instruction = f"Given the task, please choose an Expert to answer the question. Choose from: {', '.join(expert_roles)}."
+        routing_instruction = "Given the task, please choose an Expert to answer the question. Choose from: Physics, Chemistry, Biology Expert, or Science Generalist."
         routing_agent = LLMAgentBase(['choice'], 'Routing agent')
 
         # Get the choice of expert to route the task
         choice = routing_agent([taskInfo], routing_instruction)[0]
 
-        # Find the best matching expert
-        expert_id = 0  # Default to first expert
-        for i, role in enumerate(expert_roles):
-            if role.lower() in choice.content.lower():
-                expert_id = i
-                break
+        if 'physics' in choice.content.lower():
+            expert_id = 0
+        elif 'chemistry' in choice.content.lower():
+            expert_id = 1
+        elif 'biology' in choice.content.lower():
+            expert_id = 2
+        else:
+            expert_id = 3 # Default to Science Generalist
 
         thinking, answer = expert_agents[expert_id]([taskInfo], cot_instruction)
         return answer
@@ -313,7 +303,7 @@ class LLMAgentBase:
     - id (str): Unique identifier for the agent instance.
     \"""
 
-    def __init__(self, output_fields: list, agent_name: str, role='helpful assistant', model='claude-3-5-haiku-latest', temperature=0.5) -> None:
+    def __init__(self, output_fields: list, agent_name: str, role='helpful assistant', model='gpt-3.5-turbo-0125', temperature=0.5) -> None:
         self.output_fields = output_fields
         self.agent_name = agent_name
         self.role = role
@@ -433,14 +423,14 @@ The fitness value is the median and 95% Bootstrap Confidence Interval of the cor
 # Output Instruction and Example:
 The first key should be ("thought"), and it should capture your thought process for designing the next function. In the "thought" section, first reason about what should be the next interesting agent to try, then describe your reasoning and the overall concept behind the agent design, and finally detail the implementation steps.
 The second key ("name") corresponds to the name of your next agent architecture. 
-Finally, the last key ("code") corresponds to the exact "forward()" function in Python code that you would like to try. You must write a COMPLETE CODE in "code": Your code will be part of the entire project, so please implement complete, reliable, reusable code snippets.
+Finally, the last key ("code") corresponds to the exact “forward()” function in Python code that you would like to try. You must write a COMPLETE CODE in "code": Your code will be part of the entire project, so please implement complete, reliable, reusable code snippets.
 
 Here is an example of the output format for the next agent architecture:
 
 [EXAMPLE]
 
 You must use the exact function interface used above. You need to specify the instruction, input information, and the required output fields for various LLM agents to do their specific part of the architecture. 
-Also, it could be helpful to set the LLM's role and temperature to further control the LLM's response. Note that the LLMAgentBase() will automatically parse the output and return a list of "Infos". You can get the content by Infos.content. 
+Also, it could be helpful to set the LLM’s role and temperature to further control the LLM’s response. Note that the LLMAgentBase() will automatically parse the output and return a list of “Infos”. You can get the content by Infos.content. 
 DO NOT FORGET the taskInfo input to LLM if you think it is needed, otherwise LLM will not know about the task.
 
 ## WRONG Implementation examples:
