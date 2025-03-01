@@ -5,12 +5,12 @@ import argparse
 import threading
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
-                            QFrame, QMessageBox)
+                            QFrame, QMessageBox, QSplitter)
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 
 
 from _mmlu.search import search, AgentSystem, bootstrap_confidence_interval
-from gui_style import DARK_STYLE_SHEET, set_single_line_dynamic_height, setup_status_animation
+from gui_style import DARK_STYLE_SHEET, set_single_line_dynamic_height, setup_status_animation, setup_ui
 
 
 class SearchWorker(QThread):
@@ -64,64 +64,97 @@ class SearchGUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("MMLU Search GUI")
         self.showMaximized()
-        self.init_ui()
+        # self.init_ui()
+        setup_ui(self)
 
-    def init_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+    # def init_ui(self):
+    #     central_widget = QWidget()
+    #     self.setCentralWidget(central_widget)
+    #     main_layout = QVBoxLayout(central_widget)
 
-        main_layout.addWidget(QLabel("Example Input/Output:"))
-        self.example_text = QTextEdit()
-        self.example_text.setMinimumHeight(200)
-        main_layout.addWidget(self.example_text)
-
-        main_layout.addWidget(QLabel("Best Model:"))
-        self.results_text = QTextEdit()
-        self.results_text.setMinimumHeight(200)
-        main_layout.addWidget(self.results_text)
-
-        # Status bar at the bottom left
-        status_frame = QFrame()
-        status_frame.setObjectName("status_frame")
-        status_layout = QHBoxLayout(status_frame)
-        status_layout.setContentsMargins(10, 5, 10, 10)  # Left, top, right, bottom margins
-
-        status_title = QLabel("Status:")
-        status_title.setObjectName("status_title")
-        status_layout.addWidget(status_title)
-
-        self.status_label = QLabel("Ready")
-        self.status_label.setObjectName("status_label")
-        status_layout.addWidget(self.status_label)
-        status_layout.addStretch()
-
-        # Position the status frame at the bottom left
-        main_layout.addStretch(1)  # Push everything up
-        main_layout.addWidget(status_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
-
-        bottom_frame = QFrame()
-        bottom_layout = QHBoxLayout(bottom_frame)
+    #     # Create a splitter for the two main text areas
+    #     splitter = QSplitter(Qt.Orientation.Horizontal)
+    #     splitter.setHandleWidth(1)  # Width of the divider
+    #     splitter.setStyleSheet("""
+    #         QSplitter::handle {
+    #             background-color: #404040;
+    #         }
+    #         QSplitter::handle:horizontal {
+    #             width: 1px;
+    #         }
+    #         QSplitter::handle:hover {
+    #             background-color: #0078d7;
+    #         }
+    #     """)
         
-        self.task_text = QTextEdit()
-        self.task_text.setObjectName("task_description")
-        self.task_text.setMinimumHeight(35)
-        self.task_text.setMaximumHeight(35)
-        self.task_text.setPlaceholderText("Task Description")
-        self.task_text.textChanged.connect(self.adjust_task_height)
-        bottom_layout.addWidget(self.task_text)
-
-        self.search_button = QPushButton("Search")
-        self.search_button.clicked.connect(self.start_search)
-        bottom_layout.addWidget(self.search_button)
+    #     # Left side - Example Input/Output
+    #     left_container = QWidget()
+    #     left_layout = QVBoxLayout(left_container)
+    #     self.example_text = QTextEdit()
+    #     self.example_text.setPlaceholderText("Example Input/Output")
+    #     self.example_text.setObjectName("example_text")  # important for style override
+    #     left_layout.addWidget(self.example_text)
+    #     splitter.addWidget(left_container)
         
-        main_layout.addWidget(bottom_frame)
+    #     # Right side - Best Model
+    #     right_container = QWidget()
+    #     right_layout = QVBoxLayout(right_container)
+    #     right_layout.addWidget(QLabel("Best Model:"))
+    #     self.results_text = QTextEdit()
+    #     self.results_text.setObjectName("results_text")
+    #     self.results_text.setMinimumHeight(200)
+    #     self.results_text.setReadOnly(True)
+    #     right_layout.addWidget(self.results_text)
+    #     splitter.addWidget(right_container)
+        
+    #     # Set initial sizes (50/50 split)
+    #     splitter.setSizes([500, 500])
+        
+    #     # Add the splitter to the main layout
+    #     main_layout.addWidget(splitter)
 
-        self.worker = None
+    #     # Status bar at the bottom left
+    #     status_frame = QFrame()
+    #     status_frame.setObjectName("status_frame")
+    #     status_layout = QHBoxLayout(status_frame)
+    #     status_layout.setContentsMargins(10, 5, 10, 10)  # Left, top, right, bottom margins
 
-        set_single_line_dynamic_height(self.task_text)
+    #     status_title = QLabel("Status:")
+    #     status_title.setObjectName("status_title")
+    #     status_layout.addWidget(status_title)
 
-        setup_status_animation(self.status_label)
+    #     self.status_label = QLabel("Ready")
+    #     self.status_label.setObjectName("status_label")
+    #     status_layout.addWidget(self.status_label)
+    #     status_layout.addStretch()
+
+    #     # Position the status frame at the bottom left
+    #     main_layout.addStretch(1)  # Push everything up
+    #     main_layout.addWidget(status_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+
+    #     bottom_frame = QFrame()
+    #     bottom_layout = QHBoxLayout(bottom_frame)
+        
+    #     self.task_text = QTextEdit()
+    #     self.task_text.setObjectName("task_description")
+    #     self.task_text.setMinimumHeight(35)
+    #     self.task_text.setMaximumHeight(35)
+    #     self.task_text.setPlaceholderText("Task Description")
+    #     self.task_text.textChanged.connect(self.adjust_task_height)
+    #     bottom_layout.addWidget(self.task_text)
+
+    #     self.search_button = QPushButton("Search")
+    #     self.search_button.clicked.connect(self.start_search)
+    #     bottom_layout.addWidget(self.search_button)
+        
+    #     main_layout.addWidget(bottom_frame)
+
+    #     self.worker = None
+
+    #     set_single_line_dynamic_height(self.task_text)
+    #     set_single_line_dynamic_height(self.example_text)
+    #     set_single_line_dynamic_height(self.example_text)
+    #     setup_status_animation(self.status_label)
 
     def adjust_task_height(self):
         doc_height = self.task_text.document().size().height()
