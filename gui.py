@@ -3,15 +3,15 @@ import json
 import os
 import argparse
 import threading
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
-                            QFrame, QMessageBox)
-from PyQt5.QtCore import Qt, pyqtSignal, QThread
+                            QFrame, QMessageBox, QSplitter)
+from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer
 
-# Added import for the style
-from gui_style import DARK_STYLE_SHEET
 
 from _mmlu.search import search, AgentSystem, bootstrap_confidence_interval
+from gui_style import DARK_STYLE_SHEET, set_single_line_dynamic_height, setup_status_animation, setup_ui
+
 
 class SearchWorker(QThread):
     finished = pyqtSignal(dict)
@@ -33,7 +33,7 @@ class SearchWorker(QThread):
             args.expr_name = "mmlu_gpt3.5_results"
             args.n_generation = 30
             args.debug_max = 3
-            args.model = 'claude-3-5-haiku-latest'
+            args.model = 'gpt-3.5-turbo-0125'
 
             search(args)
 
@@ -64,96 +64,9 @@ class SearchGUI(QMainWindow):
         super().__init__()
         self.setWindowTitle("MMLU Search GUI")
         self.showMaximized()
-        self.init_ui()
-
-    def init_ui(self):
-        # The existing inline style remains exactly as it was.
-        self.setStyleSheet("""
-            QMainWindow, QWidget {
-                background-color: #2E2E2E;
-                color: white;
-            }
-            QTextEdit {
-                background-color: #2E2E2E;
-                color: white;
-                border: 1px solid #404040;
-                font-size: 14px;
-            }
-            QTextEdit#task_description {
-                background-color: #2E2E2E;
-                color: white;
-                border: 1px solid #404040;
-                border-radius: 10px;
-                padding: 5px;
-                font-size: 14px;
-                min-height: 35px;
-                max-height: 100px;
-            }
-            QTextEdit#task_description[placeholder="true"] {
-                color: #808080;
-            }
-            QLabel {
-                color: white;
-                font-size: 14px;
-            }
-            QPushButton {
-                background-color: #404040;
-                color: white;
-                border: 1px solid #505050;
-                border-radius: 10px;
-                padding: 8px 20px;
-                font-size: 14px;
-                min-height: 35px;
-            }
-            QPushButton:hover {
-                background-color: #505050;
-            }
-            QPushButton:disabled {
-                background-color: #303030;
-                color: #808080;
-            }
-        """)
-
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-
-        main_layout.addWidget(QLabel("Example Input/Output:"))
-        self.example_text = QTextEdit()
-        self.example_text.setMinimumHeight(200)
-        main_layout.addWidget(self.example_text)
-
-        main_layout.addWidget(QLabel("Best Model:"))
-        self.results_text = QTextEdit()
-        self.results_text.setMinimumHeight(200)
-        main_layout.addWidget(self.results_text)
-
-        status_frame = QFrame()
-        status_layout = QHBoxLayout(status_frame)
-        status_layout.addWidget(QLabel("Status:"))
-        self.status_label = QLabel("Ready")
-        status_layout.addWidget(self.status_label)
-        status_layout.addStretch()
-        main_layout.addWidget(status_frame)
-
-        bottom_frame = QFrame()
-        bottom_layout = QHBoxLayout(bottom_frame)
-        
-        self.task_text = QTextEdit()
-        self.task_text.setObjectName("task_description")
-        self.task_text.setMinimumHeight(35)
-        self.task_text.setMaximumHeight(35)
-        self.task_text.setPlaceholderText("Task Description")
-        self.task_text.textChanged.connect(self.adjust_task_height)
-        bottom_layout.addWidget(self.task_text)
-
-        self.search_button = QPushButton("Start Search")
-        self.search_button.clicked.connect(self.start_search)
-        bottom_layout.addWidget(self.search_button)
-        
-        main_layout.addWidget(bottom_frame)
-
-        self.worker = None
+        # self.init_ui()
+        setup_ui(self)
+        # MainWindow.init_ui(self)
 
     def adjust_task_height(self):
         doc_height = self.task_text.document().size().height()
@@ -170,7 +83,7 @@ class SearchGUI(QMainWindow):
             return
 
         self.search_button.setEnabled(False)
-        self.status_label.setText("Searching...")
+        self.status_label.set_running()
 
         self.worker = SearchWorker()
         self.worker.finished.connect(self.search_completed)
@@ -181,11 +94,11 @@ class SearchGUI(QMainWindow):
         self.results_text.clear()
         self.results_text.append(f"Best Model (Fitness: {best_model['fitness']}):\n\n")
         self.results_text.append(best_model['code'])
-        self.status_label.setText("Search Complete!")
+        self.status_label.set_ready()
         self.search_button.setEnabled(True)
 
     def search_error(self, error_message):
-        self.status_label.setText("Error occurred!")
+        self.status_label.set_error()
         QMessageBox.critical(self, "Error", error_message)
         self.search_button.setEnabled(True)
 
