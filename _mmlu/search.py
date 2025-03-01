@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import random
+import requests
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 
@@ -15,21 +16,23 @@ from tqdm import tqdm
 from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
 client = openai.OpenAI(
-    api_key=os.environ["ANTHROPIC_API_KEY"],  # Your Anthropic API key from environment variable
+    api_key = "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",
+    # api_key=os.environ["ANTHROPIC_API_KEY"], 
     base_url="https://api.anthropic.com/v1/"  # Anthropic's API endpoint
 )
 
-from _mmlu.utils import random_id, bootstrap_confidence_interval, load_dataset
+from _mmlu.utils import format_multichoice_question, random_id, bootstrap_confidence_interval, load_dataset
 
 Info = namedtuple('Info', ['name', 'author', 'content', 'iteration_idx'])
 
-FORMAT_INST = lambda request_keys: f"""Reply EXACTLY with the following JSON format.\n{str(request_keys)}\nDO NOT MISS ANY REQUEST FIELDS and ensure that your response is a well-formed JSON object!\n"""
+FORMAT_INST = lambda request_keys: f"""Reply EXACTLY with the following JSON format.\n{str(request_keys)}\nDO NOT MISS ANY REQUEST FIELDS and ensure that your response is a well-formed JSON object! DO NOT RESPOND WITH ANY PLAIN ENGLISH UNLESS IT IS IN YOUR JSON. SURROUND KEYS AND ELEMENTS WITH DOUBLE QUOTES ALWAYS, AND NO NEW LINES IN YOUR OUTPUT OR ELSE YOU FAIL. For example: {{ "thinking": "Some text with no new lines", "answer": "A"}}\n"""
 ROLE_DESC = lambda role: f"You are a {role}."
 SYSTEM_MSG = ""
 
 PRINT_LLM_DEBUG = False
 SEARCHING_MODE = True
 
+URL = "https://0sryxe66na3wyc-8000.proxy.runpod.net/v1/chat/completions"
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError)
 def get_json_response_from_gpt(
@@ -38,16 +41,55 @@ def get_json_response_from_gpt(
         system_message,
         temperature=0.5
 ):
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": msg},
-        ],
-        temperature=temperature, max_tokens=4096, stop=None, response_format={"type": "json_object"}
+    response = requests.post(
+        url = URL,
+        json = {
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": msg},
+            ],
+            "temperature": temperature, 
+            # "max_tokens": 4096, 
+        }
     )
-    content = response.choices[0].message.content
-    json_dict = json.loads(content)
+
+    if response.status_code != 200:
+        print(f"Error {response.status_code}: {response.text}")
+
+    response_json = response.json()
+    content = response_json['choices'][0]['message']['content']
+    thinking = content.split("thinking")[-1].split("\"")[2]
+    answer = content.split("answer")[-1].split("\"")[2]
+    json_dict = {}
+    # ": "A" 
+    json_dict['thinking'] = thinking
+    json_dict['answer'] = answer
+    # Log the message and response
+
+    log_file = "gpt_response_log.json"
+
+    log_entry = {
+        "message": msg,
+        "response": json_dict
+    }
+    
+    try:
+        # Load existing log if it exists
+        if os.path.exists(log_file):
+            with open(log_file, 'r') as f:
+                log_data = json.load(f)
+        else:
+            log_data = []
+            
+        # Append new entry
+        log_data.append(log_entry)
+        
+        # Write updated log
+        with open(log_file, 'w') as f:
+            json.dump(log_data, f, indent=4)
+    except Exception as e:
+        print(f"Error logging response: {e}")
+    
     # cost = response.usage.completion_tokens / 1000000 * 15 + response.usage.prompt_tokens / 1000000 * 5
     assert not json_dict is None
     return json_dict
@@ -59,12 +101,19 @@ def get_json_response_from_gpt_reflect(
         model,
         temperature=0.8
 ):
-    response = client.chat.completions.create(
-        model=model,
-        messages=msg_list,
-        temperature=temperature, max_tokens=4096, stop=None, response_format={"type": "json_object"}
+    response = requests.post(
+        url = URL, 
+        json = {
+            "messages": msg_list
+        }
     )
-    content = response.choices[0].message.content
+
+    if response.status_code != 200:
+        print(f"Error {response.status_code}: {response.text}")
+    
+    response_json = response.json()
+    content = response_json['choices'][0]['message']['content']
+
     json_dict = json.loads(content)
     assert not json_dict is None
     return json_dict
@@ -76,7 +125,7 @@ class LLMAgentBase():
     """
 
     def __init__(self, output_fields: list, agent_name: str,
-                 role='helpful assistant', model='gpt-3.5-turbo-0125', temperature=0.5) -> None:
+                 role='helpful assistant', model='claude-3-5-haiku-latest', temperature=0.5) -> None:
         self.output_fields = output_fields
         self.agent_name = agent_name
 
@@ -118,7 +167,7 @@ class LLMAgentBase():
             response_json = get_json_response_from_gpt(prompt, self.model, system_prompt, self.temperature)
             assert len(response_json) == len(self.output_fields), "not returning enough fields"
         except Exception as e:
-            # print(e)
+            print(e)
             if "maximum context length" in str(e) and SEARCHING_MODE:
                 raise AssertionError("The context is too long. Please try to design the agent to have shorter context.")
             # try to fill in the missing field
@@ -171,7 +220,6 @@ def search(args):
             print("During evaluating initial archive:")
             print(e)
             continue
-
         fitness_str = bootstrap_confidence_interval(acc_list)
         solution['fitness'] = fitness_str
 
@@ -200,10 +248,11 @@ def search(args):
             msg_list.append({"role": "user", "content": Reflexion_prompt_2})
             next_solution = get_json_response_from_gpt_reflect(msg_list, args.model)
         except Exception as e:
-            print("During LLM generate new solution:")
+            print("During LLM generate new solution 1:")
             print(e)
             n -= 1
             continue
+
 
         acc_list = []
         for _ in range(args.debug_max):
@@ -220,7 +269,7 @@ def search(args):
                 try:
                     next_solution = get_json_response_from_gpt_reflect(msg_list, args.model)
                 except Exception as e:
-                    print("During LLM generate new solution:")
+                    print("During LLM generate new solution 2:")
                     print(e)
                     continue
                 continue
@@ -282,62 +331,85 @@ def evaluate(args):
 def evaluate_forward_fn(args, forward_str):
     # dynamically define forward()
     # modified from https://github.com/luchris429/DiscoPOP/blob/main/scripts/launch_evo.py
-    exec(forward_str)
-    forward = locals()['forward']
+    namespace = {}
+    exec(forward_str, globals(), namespace)
+    names = list(namespace.keys())
+    if len(names) != 1:
+        raise AssertionError(f"{len(names)} things in namespace. Please only provide 1")
+    func = namespace[names[0]]
+    if not callable(func):
+        raise AssertionError(f"{func} is not callable")
+    setattr(AgentSystem, "forward", func)
 
-    # Load dataset
-    examples = load_dataset(args.data_path, is_multiple_choice=args.is_multiple_choice)
-    
-    # If debug mode, only use a subset of examples
-    if args.debug:
-        examples = examples[:10]
+    LETTER_TO_INDEX = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+    # set seed 0 for valid set
+    df = pandas.read_csv(args.data_filename)
+    random.seed(args.shuffle_seed)
+    examples = [row.to_dict() for _, row in df.iterrows()]
+    random.shuffle(examples)
+
+    if SEARCHING_MODE:
+        examples = examples[:args.valid_size] * args.n_repreat
+    else:
+        examples = examples[args.valid_size:args.valid_size + args.test_size] * args.n_repreat
+
+    questions = [format_multichoice_question(example) for example in examples]
+    answers = [LETTER_TO_INDEX[example['Answer']] for example in examples]
+
+    print(f"problem length: {len(examples)}")
+    max_workers = min(len(examples), args.max_workers) if args.multiprocessing else 1
+
+    task_queue = []
+    for q in questions:
+        taskInfo = Info('task', 'User', q, -1)
+        task_queue.append(taskInfo)
+
+    agentSystem = AgentSystem()
 
     acc_list = []
-    with ThreadPoolExecutor(max_workers=args.n_workers) as executor:
-        futures = []
-        for example in examples:
-            # Create task info
-            task_info = Info('task', 'User', example.question, -1)
-            futures.append(executor.submit(evaluate_one_example, forward, task_info, example))
+    # print(f'{task_queue=}')
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(tqdm(executor.map(agentSystem.forward, task_queue), total=len(task_queue)))
 
-        for future in tqdm(futures):
-            try:
-                acc = future.result()
-                acc_list.append(acc)
-            except Exception as e:
-                print(e)
+    for q_idx, res in enumerate(results):
+        try:
+            if isinstance(res, str) and res in LETTER_TO_INDEX:
+                predicted_idx = LETTER_TO_INDEX[res]
+            elif 'A)' in res:
+                predicted_idx = 0
+            elif 'B)' in res:
+                predicted_idx = 1
+            elif 'C)' in res:
+                predicted_idx = 2
+            elif 'D)' in res:
+                predicted_idx = 3
+            elif isinstance(res, list):
+                try_res = res[1]
+                predicted_idx = LETTER_TO_INDEX[try_res.content]
+            elif res.content in LETTER_TO_INDEX:
+                predicted_idx = LETTER_TO_INDEX[res.content]
+            elif 'A)' in res.content:
+                predicted_idx = 0
+            elif 'B)' in res.content:
+                predicted_idx = 1
+            elif 'C)' in res.content:
+                predicted_idx = 2
+            elif 'D)' in res.content:
+                predicted_idx = 3
+            else:
+                print(f"error in q {q_idx}")
                 acc_list.append(0)
+                continue
+        except Exception as e:
+            acc_list.append(0)
+            continue
 
+        if predicted_idx == answers[q_idx]:
+            acc_list.append(1)
+        else:
+            acc_list.append(0)
+    print(f"acc: {bootstrap_confidence_interval(acc_list)}")
     return acc_list
-
-def evaluate_one_example(forward, task_info, example):
-    try:
-        # Get the model's answer
-        answer = forward(None, task_info)
-        if isinstance(answer, Info):
-            answer = answer.content
-        
-        # Clean up the answer
-        answer = str(answer).strip().upper()
-        if len(answer) > 1:
-            # Extract just the letter if it's a longer string
-            import re
-            match = re.search(r'[A-D]', answer)
-            if match:
-                answer = match.group()
-        
-        # Get the correct answer
-        correct_answer = str(example.answer).strip().upper()
-        if len(correct_answer) > 1:
-            match = re.search(r'[A-D]', correct_answer)
-            if match:
-                correct_answer = match.group()
-        
-        # Compare answers
-        return float(answer == correct_answer)
-    except Exception as e:
-        print(f"Error evaluating example: {e}")
-        return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -356,7 +428,7 @@ if __name__ == "__main__":
     parser.add_argument('--model',
                         type=str,
                         default='claude-3-haiku-20240307',
-                        choices=['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-2024-05-13'])
+                        choices=['gpt-4-turbo-2024-04-09', 'claude-3-5-haiku-latest', 'gpt-4o-2024-05-13'])
 
     args = parser.parse_args()
     # search

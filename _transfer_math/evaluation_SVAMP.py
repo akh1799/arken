@@ -68,7 +68,7 @@ class LLMAgentBase():
     """
 
     def __init__(self, output_fields: list, agent_name: str,
-                 role='helpful assistant', model='gpt-3.5-turbo-0125', temperature=0.5) -> None:
+                 role='helpful assistant', model='claude-3-5-haiku-latest', temperature=0.5) -> None:
         self.output_fields = output_fields
         self.agent_name = agent_name
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('--model',
                         type=str,
                         default='gpt-4o-2024-05-13',
-                        choices=['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-2024-05-13'])
+                        choices=['gpt-4-turbo-2024-04-09', 'claude-3-5-haiku-latest', 'gpt-4o-2024-05-13'])
 
     args = parser.parse_args()
 

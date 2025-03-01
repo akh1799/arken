@@ -12,6 +12,22 @@ QUERY_TEMPLATE_GENERIC = """
 {options_text}
 """.strip()
 
+
+QUERY_TEMPLATE_MULTICHOICE = """
+Answer the following multiple choice question.
+
+{Question}
+
+(A) {A}
+(B) {B}
+(C) {C}
+(D) {D}
+""".strip()
+
+
+def format_multichoice_question(row):
+    return QUERY_TEMPLATE_MULTICHOICE.format(**row)
+
 def format_question(row, is_multiple_choice=True):
     """
     Format a question based on the row data and whether it's multiple choice.
