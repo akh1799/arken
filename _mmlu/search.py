@@ -16,7 +16,7 @@ from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
 client = openai.OpenAI()
 
-from _mmlu.utils import format_question, random_id, bootstrap_confidence_interval, load_dataset
+from _mmlu.utils import random_id, bootstrap_confidence_interval, load_dataset
 
 Info = namedtuple('Info', ['name', 'author', 'content', 'iteration_idx'])
 
