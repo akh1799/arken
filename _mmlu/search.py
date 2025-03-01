@@ -16,7 +16,7 @@ from tqdm import tqdm
 from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
 client = openai.OpenAI(
-    api_key=os.environ["OPENAI_API_KEY"], 
+    api_key=os.environ["ANTHROPIC_API_KEY"], 
     base_url="https://api.anthropic.com/v1/"  # Anthropic's API endpoint
 )
 

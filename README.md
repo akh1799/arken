@@ -1,6 +1,7 @@
 <h1 align="center">
   <b>InstA-gent 🤵‍♂️</b><br>
 </h1>
+<h2 align="center">Team Arken: Zarif A, Aryaman K, Ryan L, Alvin Z</h2>
 
 This application allows any user to create agents with high-level reasoning capabiilties using only cheap, lightweight LLMs. We employ a meta-agent, inspired by Hu et al. Our meta-agent explores a possible design space and incorporates various inference-time reasoning techniques, such as Chain of Thought (CoT) or Reflexion. 
 
@@ -11,7 +12,7 @@ conda activate instagent
 pip install -r requirements.txt
 
 # provide your OpenAI API key
-export OPENAI_API_KEY="YOUR KEY HERE"
+export ANTHROPIC_API_KEY="YOUR KEY HERE"
 ```
 
 See `api/README.md` for instructions on how to host a local LLAMA. Currently, our codebase is hard-coded to use this local LLAMA (but we have implemented functionality to use any OpenAI-compatible model API). 
