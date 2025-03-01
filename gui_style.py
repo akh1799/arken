@@ -246,6 +246,7 @@ def setup_ui(window):
     window.setCentralWidget(central_widget)
     main_layout = QVBoxLayout(central_widget)
 
+    # Create a splitter for the two main text areas
     splitter = QSplitter(Qt.Orientation.Horizontal)
     splitter.setHandleWidth(1) 
     splitter.setStyleSheet("""
@@ -263,12 +264,28 @@ def setup_ui(window):
     # Left side - Example Input/Output
     left_container = QWidget()
     left_layout = QVBoxLayout(left_container)
+
+    # Title and Subtitle
+    title_label = QLabel("<b>One-Click Agents</b>")
+    title_label.setObjectName("title_label")
+    title_label.setStyleSheet("font-size: 30px;") 
+    subtitle_label = QLabel("Automation to create high-level reasoning agents blazing fast")
+    subtitle_label.setObjectName("subtitle_label")
+
+    # Add title and subtitle to the left layout
+    left_layout.addWidget(title_label)
+    left_layout.addWidget(subtitle_label)
+
+    # Example Input/Output Text Box
     window.example_text = QTextEdit()
     window.example_text.setMinimumHeight(70)
     window.example_text.setMaximumHeight(200) 
     window.example_text.setPlaceholderText("Example Input/Output")
     window.example_text.setObjectName("example_text")
     left_layout.addWidget(window.example_text)
+
+    left_layout.addStretch(0) 
+
     splitter.addWidget(left_container)
     
     # Right side - Best Model
@@ -277,13 +294,12 @@ def setup_ui(window):
     right_layout.addWidget(QLabel("Best Model:"))
     window.results_text = QTextEdit()
     window.results_text.setObjectName("results_text")
-    window.results_text.setMinimumHeight(500)
     window.results_text.setMinimumHeight(600) 
     window.results_text.setReadOnly(True)
     right_layout.addWidget(window.results_text)
     splitter.addWidget(right_container)
     
-    splitter.setSizes([500, 500])
+    splitter.setSizes([400, 600])
     
     main_layout.addWidget(splitter)
 
