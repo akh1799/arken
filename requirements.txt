@@ -5,5 +5,5 @@ openai
 backoff
 scipy
 blobfile
-pyqt6
+pyqt5
 ttkinter
