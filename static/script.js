@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: ['Base', 'CoT', 'CoT-Sc', 'Gen. Agent'],
             datasets: [{
-                data: [36, 48.2, 46, 0],
+                data: [36, 48.2, 45.3, 0],
                 backgroundColor: [
                     'rgba(0, 149, 255, 0.6)',
                     'rgba(0, 149, 255, 0.6)',
