@@ -3,10 +3,10 @@ import json
 import os
 import argparse
 import threading
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QTextEdit, QPushButton, 
                             QFrame, QMessageBox)
-from PyQt6.QtCore import Qt, pyqtSignal, QThread
+from PyQt5.QtCore import Qt, pyqtSignal, QThread
 
 # Added import for the style
 from gui_style import DARK_STYLE_SHEET
@@ -33,7 +33,7 @@ class SearchWorker(QThread):
             args.expr_name = "mmlu_gpt3.5_results"
             args.n_generation = 30
             args.debug_max = 3
-            args.model = 'gpt-3.5-turbo-0125'
+            args.model = 'claude-3-5-haiku-latest'
 
             search(args)
 

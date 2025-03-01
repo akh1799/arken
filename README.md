@@ -6,8 +6,8 @@ This application allows any user to create agents with high-level reasoning capa
 
 ## Setup
 ```bash
-conda create -n adas python=3.11
-conda activate adas
+conda create -n oneclickagents python=3.11
+conda activate oneclickagents
 pip install -r requirements.txt
 
 # provide your OpenAI API key
