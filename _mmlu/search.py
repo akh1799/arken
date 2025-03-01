@@ -14,7 +14,10 @@ from tqdm import tqdm
 
 from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
-client = openai.OpenAI()
+client = openai.OpenAI(
+    api_key=os.environ["ANTHROPIC_API_KEY"],  # Your Anthropic API key from environment variable
+    base_url="https://api.anthropic.com/v1/"  # Anthropic's API endpoint
+)
 
 from _mmlu.utils import random_id, bootstrap_confidence_interval, load_dataset
 
@@ -307,6 +310,34 @@ def evaluate_forward_fn(args, forward_str):
 
     return acc_list
 
+def evaluate_one_example(forward, task_info, example):
+    try:
+        # Get the model's answer
+        answer = forward(None, task_info)
+        if isinstance(answer, Info):
+            answer = answer.content
+        
+        # Clean up the answer
+        answer = str(answer).strip().upper()
+        if len(answer) > 1:
+            # Extract just the letter if it's a longer string
+            import re
+            match = re.search(r'[A-D]', answer)
+            if match:
+                answer = match.group()
+        
+        # Get the correct answer
+        correct_answer = str(example.answer).strip().upper()
+        if len(correct_answer) > 1:
+            match = re.search(r'[A-D]', correct_answer)
+            if match:
+                correct_answer = match.group()
+        
+        # Compare answers
+        return float(answer == correct_answer)
+    except Exception as e:
+        print(f"Error evaluating example: {e}")
+        return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -324,7 +355,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug_max', type=int, default=3)
     parser.add_argument('--model',
                         type=str,
-                        default='gpt-4o-2024-05-13',
+                        default='claude-3-haiku-20240307',
                         choices=['gpt-4-turbo-2024-04-09', 'gpt-3.5-turbo-0125', 'gpt-4o-2024-05-13'])
 
     args = parser.parse_args()
