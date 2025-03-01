@@ -16,7 +16,7 @@ from _mmlu.mmlu_prompt import get_init_archive, get_prompt, get_reflexion_prompt
 
 client = openai.OpenAI()
 
-from _mmlu.utils import format_multichoice_question, random_id, bootstrap_confidence_interval
+from _mmlu.utils import format_question, random_id, bootstrap_confidence_interval, load_dataset
 
 Info = namedtuple('Info', ['name', 'author', 'content', 'iteration_idx'])
 
@@ -279,83 +279,32 @@ def evaluate(args):
 def evaluate_forward_fn(args, forward_str):
     # dynamically define forward()
     # modified from https://github.com/luchris429/DiscoPOP/blob/main/scripts/launch_evo.py
-    namespace = {}
-    exec(forward_str, globals(), namespace)
-    names = list(namespace.keys())
-    if len(names) != 1:
-        raise AssertionError(f"{len(names)} things in namespace. Please only provide 1")
-    func = namespace[names[0]]
-    if not callable(func):
-        raise AssertionError(f"{func} is not callable")
-    setattr(AgentSystem, "forward", func)
+    exec(forward_str)
+    forward = locals()['forward']
 
-    LETTER_TO_INDEX = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
-    # set seed 0 for valid set
-    df = pandas.read_csv(args.data_filename)
-    random.seed(args.shuffle_seed)
-    examples = [row.to_dict() for _, row in df.iterrows()]
-    random.shuffle(examples)
-
-    if SEARCHING_MODE:
-        examples = examples[:args.valid_size] * args.n_repreat
-    else:
-        examples = examples[args.valid_size:args.valid_size + args.test_size] * args.n_repreat
-
-    questions = [format_multichoice_question(example) for example in examples]
-    answers = [LETTER_TO_INDEX[example['Answer']] for example in examples]
-
-    print(f"problem length: {len(examples)}")
-    max_workers = min(len(examples), args.max_workers) if args.multiprocessing else 1
-
-    task_queue = []
-    for q in questions:
-        taskInfo = Info('task', 'User', q, -1)
-        task_queue.append(taskInfo)
-
-    agentSystem = AgentSystem()
+    # Load dataset
+    examples = load_dataset(args.data_path, is_multiple_choice=args.is_multiple_choice)
+    
+    # If debug mode, only use a subset of examples
+    if args.debug:
+        examples = examples[:10]
 
     acc_list = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(tqdm(executor.map(agentSystem.forward, task_queue), total=len(task_queue)))
+    with ThreadPoolExecutor(max_workers=args.n_workers) as executor:
+        futures = []
+        for example in examples:
+            # Create task info
+            task_info = Info('task', 'User', example.question, -1)
+            futures.append(executor.submit(evaluate_one_example, forward, task_info, example))
 
-    for q_idx, res in enumerate(results):
-        try:
-            if isinstance(res, str) and res in LETTER_TO_INDEX:
-                predicted_idx = LETTER_TO_INDEX[res]
-            elif 'A)' in res:
-                predicted_idx = 0
-            elif 'B)' in res:
-                predicted_idx = 1
-            elif 'C)' in res:
-                predicted_idx = 2
-            elif 'D)' in res:
-                predicted_idx = 3
-            elif isinstance(res, list):
-                try_res = res[1]
-                predicted_idx = LETTER_TO_INDEX[try_res.content]
-            elif res.content in LETTER_TO_INDEX:
-                predicted_idx = LETTER_TO_INDEX[res.content]
-            elif 'A)' in res.content:
-                predicted_idx = 0
-            elif 'B)' in res.content:
-                predicted_idx = 1
-            elif 'C)' in res.content:
-                predicted_idx = 2
-            elif 'D)' in res.content:
-                predicted_idx = 3
-            else:
-                print(f"error in q {q_idx}")
+        for future in tqdm(futures):
+            try:
+                acc = future.result()
+                acc_list.append(acc)
+            except Exception as e:
+                print(e)
                 acc_list.append(0)
-                continue
-        except Exception as e:
-            acc_list.append(0)
-            continue
 
-        if predicted_idx == answers[q_idx]:
-            acc_list.append(1)
-        else:
-            acc_list.append(0)
-    print(f"acc: {bootstrap_confidence_interval(acc_list)}")
     return acc_list
 
 
