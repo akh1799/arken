@@ -7,3 +7,4 @@ scipy
 blobfile
 pyqt5
 ttkinter
+requests
